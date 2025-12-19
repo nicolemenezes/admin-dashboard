@@ -1,21 +1,42 @@
-"use client"
+import React, { useState } from "react";
+import { Outlet } from "react-router-dom";
+import Sidebar from "./Sidebar";
+import { Header } from "./Header";
 
-import { useState } from "react"
-import {Header} from "./header"
-import Sidebar from "./sidebar"
+export default function Layout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-export default function DashboardLayout({ children }) {
-  const [open, setOpen] = useState(false)
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[18rem_1fr]">
-      <Sidebar open={open} onClose={() => setOpen(false)} />
-      <div className="flex min-w-0 flex-col">
-        <Header onToggleSidebar={() => setOpen((v) => !v)} />
-        <main className="p-4 md:p-6">
-          <div className="mx-auto max-w-7xl">{children}</div>
+    <div className="flex h-screen bg-gray-50">
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={toggleSidebar}
+        ></div>
+      )}
+
+      {/* Sidebar */}
+      <div
+        className={`fixed md:static inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <Sidebar />
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header onToggleSidebar={toggleSidebar} />
+        
+        <main className="flex-1 overflow-y-auto bg-gray-50">
+          <Outlet />
         </main>
       </div>
     </div>
-  )
+  );
 }
