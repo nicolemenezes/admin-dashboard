@@ -1,14 +1,9 @@
 import asyncHandler from 'express-async-handler';
 import User from '../models/User.js';
 import Session from '../models/Session.js';
-import {
-  signAccessToken,
-  signRefreshToken,
-  verifyRefreshToken,
-  extractTokenFromHeader
-} from '../utils/tokenUtils.js';
+import { signAccessToken } from '../utils/tokenUtils.js';
 import { sendWelcomeEmail } from '../utils/emailService.js';
-import { hashPassword, comparePassword } from '../utils/passwordUtils.js';
+import { hashPassword } from '../utils/passwordUtils.js';
 
 /**
  * @desc    Register new user
@@ -18,6 +13,11 @@ import { hashPassword, comparePassword } from '../utils/passwordUtils.js';
 const register = asyncHandler(async (req, res) => {
   const { name, email, password, role } = req.body;
 
+  if (!name || !email || !password) {
+    res.status(400);
+    throw new Error('All fields are required');
+  }
+
   // Check if user already exists
   const existingUser = await User.findOne({ email });
   if (existingUser) {
@@ -25,16 +25,19 @@ const register = asyncHandler(async (req, res) => {
     throw new Error('User already exists with this email');
   }
 
+  const hashedPassword = await hashPassword(password);
+
   // Create user
   const user = await User.create({
     name,
     email,
-    password,
+    password: hashedPassword,
     role: role || 'user' // Default to 'user', only admin can create admin users
   });
 
-  // Send welcome email
-  await sendWelcomeEmail(user.email, user.name);
+  // Fire-and-forget welcome email
+  sendWelcomeEmail(user.email, user.name)
+    .catch(err => console.error('Email error:', err.message));
 
   // Generate token
   const token = signAccessToken({

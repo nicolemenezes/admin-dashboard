@@ -10,10 +10,9 @@ import { sanitizeBody } from './middleware/validationMiddleware.js';
 
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
-import revenueRoutes from './routes/revenueRoutes.js';
-import dashboardRoutes from './routes/dashboardRoutes.js';
-import apiKeyRoutes from './routes/apiKeyRoutes.js';
-import sessionRoutes from './routes/sessions.js';
+import projectRoutes from './routes/projectRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import billingRoutes from './routes/billingRoutes.js';
 
 connectDB();
 
@@ -25,7 +24,7 @@ app.use(
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
@@ -41,12 +40,9 @@ app.get('/health', (_req, res) =>
 );
 
 const API_PREFIX = '/api';
-app.use(`${API_PREFIX}/auth`, authRoutes);
-app.use(`${API_PREFIX}/users`, userRoutes);
-app.use(`${API_PREFIX}/revenue`, revenueRoutes);
-app.use(`${API_PREFIX}/dashboard`, dashboardRoutes);
-app.use(`${API_PREFIX}/api-keys`, apiKeyRoutes);
-app.use(`${API_PREFIX}/sessions`, sessionRoutes);
+app.use(`${API_PREFIX}/projects`, projectRoutes);
+app.use(`${API_PREFIX}/subscriptions`, subscriptionRoutes);
+app.use(`${API_PREFIX}/billing`, billingRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

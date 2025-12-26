@@ -1,411 +1,348 @@
-import React, { useState } from "react";
-import {
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Building,
-  Calendar,
-  Edit3,
-  Camera,
-  Save,
-  Shield,
-  Bell,
-  Globe,
-  Lock,
-} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Edit3, Bell, Trash2, X } from "lucide-react";
 
-const Profile = () => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "Alex Johnson",
-    email: "alex.johnson@example.com",
-    phone: "+1 (555) 123-4567",
-    location: "Mumbai, Maharashtra, IN",
-    company: "Tech Innovations Inc.",
-    role: "Senior Developer",
-    bio: "Passionate developer with 5+ years of experience in building scalable web applications.",
+export default function Profile() {
+  const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  const token = localStorage.getItem("token");
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [profile, setProfile] = useState({
+    fullName: "",
+    bio: "",
+    phone: "",
+    location: "",
+    company: "",
+    projectsCount: 0,
+    totalHours: 0,
+    email: "",
   });
 
-  const handleSave = () => {
-    setIsEditing(false);
-    // Save logic here
+  const [showEdit, setShowEdit] = useState(false);
+  const [form, setForm] = useState({
+    fullName: "",
+    bio: "",
+    phone: "",
+    location: "",
+    company: "",
+    projectsCount: 0,
+    totalHours: 0,
+  });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get(`${base}/api/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        });
+        const data = res.data?.data;
+        setProfile({
+          fullName: data.fullName || "",
+          bio: data.bio || "",
+          phone: data.phone || "",
+          location: data.location || "",
+          company: data.company || "",
+          projectsCount: Number(data.projectsCount || 0),
+          totalHours: Number(data.totalHours || 0),
+          email: data.email || "",
+        });
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to load profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) fetchProfile();
+    else {
+      setError("You are not signed in");
+      setLoading(false);
+    }
+  }, [base, token]);
+
+  const openEdit = () => {
+    setForm({
+      fullName: profile.fullName,
+      bio: profile.bio,
+      phone: profile.phone,
+      location: profile.location,
+      company: profile.company,
+      projectsCount: profile.projectsCount,
+      totalHours: profile.totalHours,
+    });
+    setShowEdit(true);
   };
 
-  const activities = [
-    {
-      id: 1,
-      action: "Updated profile picture",
-      time: "2 hours ago",
-      icon: Camera,
-    },
-    {
-      id: 2,
-      action: "Changed password",
-      time: "1 day ago",
-      icon: Lock,
-    },
-    {
-      id: 3,
-      action: "Updated email preferences",
-      time: "3 days ago",
-      icon: Mail,
-    },
-    {
-      id: 4,
-      action: "Enabled two-factor authentication",
-      time: "1 week ago",
-      icon: Shield,
-    },
-  ];
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.put(`${base}/api/users/profile`, form, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+      const data = res.data?.data;
+      setProfile({
+        ...profile,
+        fullName: data.fullName,
+        bio: data.bio,
+        phone: data.phone,
+        location: data.location,
+        company: data.company,
+        projectsCount: data.projectsCount,
+        totalHours: data.totalHours,
+      });
+      setShowEdit(false);
+    } catch (err) {
+      alert(err.response?.data?.message || "Update failed");
+    }
+  };
+
+  const formatNumber = (n) => Number(n || 0).toLocaleString();
+
+  if (loading) {
+    return <div className="p-8">Loading...</div>;
+  }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Profile</h1>
-        <p className="text-gray-600">Manage your account settings and preferences</p>
+    <div className="p-8 space-y-6">
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {profile.fullName || "Profile"}
+          </h1>
+          <p className="text-sm text-gray-600">{profile.email}</p>
+        </div>
+        <button
+          onClick={openEdit}
+          className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+        >
+          <Edit3 size={18} />
+          Edit
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Profile Section */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Profile Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Personal Information
-                </h2>
-                {!isEditing ? (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    <Edit3 size={18} />
-                    <span className="text-sm font-medium">Edit</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleSave}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Save size={18} />
-                    <span className="text-sm font-medium">Save</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="p-6">
-              <div className="flex items-start gap-6 mb-6">
-                <div className="relative">
-                  <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                    <span className="text-white text-3xl font-bold">
-                      {formData.name.charAt(0)}
-                    </span>
-                  </div>
-                  <button className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors">
-                    <Camera className="text-white" size={16} />
-                  </button>
-                </div>
-
-                <div className="flex-1">
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    ) : (
-                      <p className="text-gray-900">{formData.name}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bio
-                    </label>
-                    {isEditing ? (
-                      <textarea
-                        value={formData.bio}
-                        onChange={(e) =>
-                          setFormData({ ...formData, bio: e.target.value })
-                        }
-                        rows={3}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    ) : (
-                      <p className="text-gray-600">{formData.bio}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <div className="flex items-center gap-2">
-                      <Mail size={16} />
-                      Email
-                    </div>
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{formData.email}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <div className="flex items-center gap-2">
-                      <Phone size={16} />
-                      Phone
-                    </div>
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{formData.phone}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <div className="flex items-center gap-2">
-                      <MapPin size={16} />
-                      Location
-                    </div>
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={formData.location}
-                      onChange={(e) =>
-                        setFormData({ ...formData, location: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{formData.location}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <div className="flex items-center gap-2">
-                      <Building size={16} />
-                      Company
-                    </div>
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={formData.company}
-                      onChange={(e) =>
-                        setFormData({ ...formData, company: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{formData.company}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Settings */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Account Settings
-              </h2>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Bell className="text-blue-600" size={20} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Notifications</p>
-                    <p className="text-sm text-gray-600">
-                      Manage your notification preferences
-                    </p>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Shield className="text-green-600" size={20} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      Two-Factor Authentication
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Add an extra layer of security
-                    </p>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Globe className="text-purple-600" size={20} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Language</p>
-                    <p className="text-sm text-gray-600">English (US)</p>
-                  </div>
-                </div>
-                <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  Change
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                    <Lock className="text-red-600" size={20} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Delete Account</p>
-                    <p className="text-sm text-gray-600">
-                      Permanently delete your account
-                    </p>
-                  </div>
-                </div>
-                <button className="text-sm text-red-600 hover:text-red-700 font-medium">
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <p className="text-sm text-gray-600">Projects</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {formatNumber(profile.projectsCount)}
+          </p>
         </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <p className="text-sm text-gray-600">Total Hours</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {formatNumber(profile.totalHours)}
+          </p>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <p className="text-sm text-gray-600">Company</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {profile.company || "-"}
+          </p>
+        </div>
+      </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Account Stats */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Account Stats
-              </h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Member Since</span>
-                <div className="flex items-center gap-2">
-                  <Calendar size={16} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-900">
-                    Jan 2024
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Projects</span>
-                <span className="text-sm font-medium text-gray-900">24</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Tasks Completed</span>
-                <span className="text-sm font-medium text-gray-900">187</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Total Hours</span>
-                <span className="text-sm font-medium text-gray-900">1,248</span>
-              </div>
-            </div>
+      {/* Personal Information */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Personal Information
+          </h2>
+          <button
+            onClick={openEdit}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            Edit
+          </button>
+        </div>
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <p className="text-xs text-gray-500">Full Name</p>
+            <p className="text-sm text-gray-900">{profile.fullName || "-"}</p>
           </div>
-
-          {/* Recent Activity */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Recent Activity
-              </h2>
-            </div>
-            <div className="p-6 space-y-4">
-              {activities.map((activity) => {
-                const Icon = activity.icon;
-                return (
-                  <div
-                    key={activity.id}
-                    className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0 last:pb-0"
-                  >
-                    <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Icon className="text-gray-600" size={16} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900">{activity.action}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {activity.time}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div>
+            <p className="text-xs text-gray-500">Phone</p>
+            <p className="text-sm text-gray-900">{profile.phone || "-"}</p>
           </div>
-
-          {/* Security */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Security</h2>
-            </div>
-            <div className="p-6 space-y-3">
-              <button className="w-full px-4 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                Change Password
-              </button>
-              <button className="w-full px-4 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                Manage Sessions
-              </button>
-              <button className="w-full px-4 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                Privacy Settings
-              </button>
-              <button className="w-full px-4 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                Download Data
-              </button>
-            </div>
+          <div>
+            <p className="text-xs text-gray-500">Location</p>
+            <p className="text-sm text-gray-900">{profile.location || "-"}</p>
+          </div>
+          <div className="md:col-span-2">
+            <p className="text-xs text-gray-500">Bio</p>
+            <p className="text-sm text-gray-900">{profile.bio || "-"}</p>
           </div>
         </div>
       </div>
+
+      {/* Settings (simplified) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Settings</h2>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Bell className="text-gray-600" size={18} />
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  Notifications
+                </p>
+                <p className="text-xs text-gray-500">
+                  Email notifications for updates
+                </p>
+              </div>
+            </div>
+            <label className="inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" defaultChecked />
+              <div className="w-11 h-6 bg-gray-200 peer-checked:bg-blue-600 rounded-full transition-colors"></div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Trash2 className="text-red-600" size={18} />
+              <div>
+                <p className="text-sm font-medium text-red-700">Delete Account</p>
+                <p className="text-xs text-red-600">
+                  This action is irreversible
+                </p>
+              </div>
+            </div>
+            <button className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm">
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Modal */}
+      {showEdit && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Edit Profile</h3>
+              <button
+                onClick={() => setShowEdit(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form
+              onSubmit={saveEdit}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
+              <div className="md:col-span-2">
+                <label className="text-sm text-gray-700">Full Name</label>
+                <input
+                  type="text"
+                  value={form.fullName}
+                  onChange={(e) =>
+                    setForm({ ...form, fullName: e.target.value })
+                  }
+                  className="mt-1 w-full border border-gray-300 rounded-lg p-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-700">Phone</label>
+                <input
+                  type="text"
+                  value={form.phone}
+                  onChange={(e) =>
+                    setForm({ ...form, phone: e.target.value })
+                  }
+                  className="mt-1 w-full border border-gray-300 rounded-lg p-2"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-700">Location</label>
+                <input
+                  type="text"
+                  value={form.location}
+                  onChange={(e) =>
+                    setForm({ ...form, location: e.target.value })
+                  }
+                  className="mt-1 w-full border border-gray-300 rounded-lg p-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm text-gray-700">Company</label>
+                <input
+                  type="text"
+                  value={form.company}
+                  onChange={(e) =>
+                    setForm({ ...form, company: e.target.value })
+                  }
+                  className="mt-1 w-full border border-gray-300 rounded-lg p-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm text-gray-700">Bio</label>
+                <textarea
+                  value={form.bio}
+                  onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                  className="mt-1 w-full border border-gray-300 rounded-lg p-2"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-700">Projects</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.projectsCount}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      projectsCount: Number(e.target.value),
+                    })
+                  }
+                  className="mt-1 w-full border border-gray-300 rounded-lg p-2"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-700">Total Hours</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.totalHours}
+                  onChange={(e) =>
+                    setForm({ ...form, totalHours: Number(e.target.value) })
+                  }
+                  className="mt-1 w-full border border-gray-300 rounded-lg p-2"
+                />
+              </div>
+              <div className="md:col-span-2 flex gap-2 mt-2">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEdit(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-export default Profile;
+}

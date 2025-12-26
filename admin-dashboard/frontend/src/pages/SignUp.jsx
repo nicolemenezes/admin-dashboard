@@ -1,10 +1,14 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight } from "lucide-react";
+import api from "../lib/api";
 
 export default function SignUp() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -13,10 +17,48 @@ export default function SignUp() {
     terms: false,
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Add your sign up logic here
-    console.log("Sign up:", formData);
+    setError("");
+
+    // Validation
+    if (!formData.name || !formData.email || !formData.password) {
+      setError("All fields are required");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (!formData.terms) {
+      setError("You must agree to the terms and conditions");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await api.post("/v1/auth/register", {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      console.log("✅ Sign up successful:", res.data);
+      
+      if (res.data.data?.token) {
+        localStorage.setItem("authToken", res.data.data.token);
+      }
+
+      navigate("/signin");
+    } catch (err) {
+      console.error("❌ Sign up failed:", err.response?.data || err.message);
+      setError(err.response?.data?.message || "Sign up failed. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,6 +75,13 @@ export default function SignUp() {
 
         {/* Sign Up Form */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name Input */}
             <div>
@@ -170,10 +219,11 @@ export default function SignUp() {
             {/* Sign Up Button */}
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Create Account
-              <ArrowRight size={18} />
+              {loading ? "Creating account..." : "Create Account"}
+              {!loading && <ArrowRight size={18} />}
             </button>
 
             {/* Divider */}
