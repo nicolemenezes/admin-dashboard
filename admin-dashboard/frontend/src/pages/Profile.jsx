@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Edit3, Bell, Trash2, X } from "lucide-react";
+import api from "../lib/axios";
 
 export default function Profile() {
   const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -30,37 +31,34 @@ export default function Profile() {
     totalHours: 0,
   });
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.get(`${base}/api/users/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true,
-        });
-        const data = res.data?.data;
-        setProfile({
-          fullName: data.fullName || "",
-          bio: data.bio || "",
-          phone: data.phone || "",
-          location: data.location || "",
-          company: data.company || "",
-          projectsCount: Number(data.projectsCount || 0),
-          totalHours: Number(data.totalHours || 0),
-          email: data.email || "",
-        });
-      } catch (err) {
-        setError(err.response?.data?.message || "Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (token) fetchProfile();
-    else {
-      setError("You are not signed in");
+  const fetchProfile = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get("/api/users/me");
+      const userData = res.data?.data ?? res.data?.user ?? res.data ?? {};
+      setProfile({
+        fullName: userData.fullName || "",
+        bio: userData.bio || "",
+        phone: userData.phone || "",
+        location: userData.location || "",
+        company: userData.company || "",
+        projectsCount: Number(userData.projectsCount || 0),
+        totalHours: Number(userData.totalHours || 0),
+        email: userData.email || "",
+      });
+    } catch (err) {
+      console.error("[API Error]:", err.response?.data || err.message);
+      setError(err.response?.data?.message || "Failed to load profile");
+      setProfile({});
+    } finally {
       setLoading(false);
     }
-  }, [base, token]);
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
   const openEdit = () => {
     setForm({

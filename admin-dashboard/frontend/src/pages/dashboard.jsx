@@ -7,8 +7,31 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const fetchDashboard = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const statsRes = await api.get('/api/dashboard/stats');
+      const statsData = Array.isArray(statsRes.data?.data?.stats)
+        ? statsRes.data.data.stats
+        : [];
+      setStats(statsData);
+
+      const txRes = await api.get('/api/transactions');
+      const txData = Array.isArray(txRes.data?.data) ? txRes.data.data : [];
+      setTransactions(txData);
+    } catch (err) {
+      console.error('[API Error]:', err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Failed to load dashboard data');
+      setStats([]);
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchDashboardData();
+    fetchDashboard();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -49,6 +72,32 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  const loadDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const statsRes = await api.get('/api/dashboard/stats');
+      console.log('Stats Raw:', statsRes.data);
+      const rawStats = statsRes.data?.data?.stats || statsRes.data?.stats || statsRes.data || [];
+      setStats(Array.isArray(rawStats) ? rawStats : []);
+
+      const txRes = await api.get('/api/transactions');
+      const rawTx = txRes.data?.data || txRes.data?.transactions || txRes.data || [];
+      setTransactions(Array.isArray(rawTx) ? rawTx : []);
+    } catch (err) {
+      console.error('[API Error]:', err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Failed to load dashboard data');
+      setStats([]);
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
   if (loading) {
     return (

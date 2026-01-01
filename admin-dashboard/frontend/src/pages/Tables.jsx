@@ -13,31 +13,25 @@ export default function Tables() {
   const [inviteError, setInviteError] = useState(null);
   const [inviteSuccess, setInviteSuccess] = useState(null);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const fetchUsers = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-
-      console.log("[Tables] Fetching users...");
-      const response = await api.get("/api/users");
-      console.log("[Tables] Users response:", response.data);
-
-      // Ensure we set an array
-      const usersData =
-        response.data?.data || response.data?.users || response.data || [];
+      const res = await api.get('/api/users');
+      const usersData = res.data?.users ?? res.data?.data ?? [];
       setUsers(Array.isArray(usersData) ? usersData : []);
-    } catch (error) {
-      console.error("[Tables] Fetch error:", error);
-      setError(error.response?.data?.message || "Failed to load users");
-      setUsers([]); // Set empty array on error
+    } catch (err) {
+      console.error('[API Error]:', err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Failed to load users');
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const handleInviteUser = async (e) => {
     e.preventDefault();
