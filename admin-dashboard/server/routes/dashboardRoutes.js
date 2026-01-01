@@ -1,18 +1,17 @@
 console.log('📌 Dashboard routes loaded');
 
 import express from 'express';
-import {
-  getStats,
-  getRecentActivity
-} from '../controllers/dashboardController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { getDashboardStats, getRecentActivity } from '../controllers/dashboardController.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// All dashboard routes require authentication
-router.use(protect);
+router.use(authMiddleware);
 
-router.get('/stats', getStats);
+// GET /api/dashboard/stats
+router.get('/stats', getDashboardStats);
+
+// GET /api/dashboard/activity
 router.get('/activity', getRecentActivity);
 
 export default router;

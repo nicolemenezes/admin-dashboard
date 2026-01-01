@@ -1,150 +1,228 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
-import { X, Check } from "lucide-react";
+import api from "../lib/axios";
+import { Mail, Plus, X } from "lucide-react";
 
 export default function Tables() {
-  const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-  const token = localStorage.getItem("token");
-
   const [users, setUsers] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteForm, setInviteForm] = useState({
-    name: "",
-    email: "",
-    role: "consultant",
-  });
+  const [inviteEmail, setInviteEmail] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
-  const [toast, setToast] = useState(null);
-
-  // Check if current user is admin
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [inviteError, setInviteError] = useState(null);
+  const [inviteSuccess, setInviteSuccess] = useState(null);
 
   useEffect(() => {
-    fetchCurrentUser();
     fetchUsers();
-  }, [base, token]);
-
-  const fetchCurrentUser = async () => {
-    try {
-      const res = await axios.get(`${base}/api/users/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-        withCredentials: true,
-      });
-      const user = res.data?.data;
-      setCurrentUser(user);
-      setIsAdmin(user?.role === "admin");
-    } catch (err) {
-      console.error("Failed to fetch current user:", err);
-    }
-  };
+  }, []);
 
   const fetchUsers = async () => {
     try {
-      setUsersLoading(true);
-      const res = await axios.get(`${base}/api/users`);
-      setUsers(res.data.data || []);
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
-      showToast("Failed to load users", "error");
+      setLoading(true);
+      setError(null);
+
+      console.log("[Tables] Fetching users...");
+      const response = await api.get("/api/users");
+      console.log("[Tables] Users response:", response.data);
+
+      // Ensure we set an array
+      const usersData =
+        response.data?.data || response.data?.users || response.data || [];
+      setUsers(Array.isArray(usersData) ? usersData : []);
+    } catch (error) {
+      console.error("[Tables] Fetch error:", error);
+      setError(error.response?.data?.message || "Failed to load users");
+      setUsers([]); // Set empty array on error
     } finally {
-      setUsersLoading(false);
+      setLoading(false);
     }
   };
 
   const handleInviteUser = async (e) => {
     e.preventDefault();
-    setInviteLoading(true);
-    try {
-      const res = await axios.post(
-        `${base}/api/users/invite`,
-        inviteForm,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true,
-        }
-      );
 
-      setUsers([res.data.data, ...users]);
-      setShowInviteModal(false);
-      setInviteForm({ name: "", email: "", role: "consultant" });
-      showToast(
-        "Success: Invitation sent! User will receive login credentials via email.",
-        "success"
+    if (!inviteEmail.trim()) {
+      setInviteError("Please enter an email address");
+      return;
+    }
+
+    try {
+      setInviteLoading(true);
+      setInviteError(null);
+      setInviteSuccess(null);
+
+      console.log("[Tables] Inviting user:", inviteEmail);
+
+      const response = await api.post("/api/users/invite", {
+        email: inviteEmail.trim(),
+      });
+
+      console.log("[Tables] Invite response:", response.data);
+
+      if (response.data.success) {
+        setInviteSuccess(`Invitation sent to ${inviteEmail}!`);
+        setInviteEmail("");
+
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setShowInviteModal(false);
+          setInviteSuccess(null);
+        }, 2000);
+
+        // Refresh users list
+        await fetchUsers();
+      }
+    } catch (error) {
+      console.error("[Tables] Invite error:", error);
+      setInviteError(
+        error.response?.data?.message || "Failed to send invitation"
       );
-    } catch (err) {
-      console.error("Failed to invite user:", err);
-      showToast(err.response?.data?.message || "Failed to send invitation", "error");
     } finally {
       setInviteLoading(false);
     }
   };
 
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 5000);
-  };
+  // Safe filter with array check
+  const filteredUsers = (Array.isArray(users) ? users : []).filter((user) => {
+    if (!searchQuery) return true;
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    const query = searchQuery.toLowerCase();
+    return (
+      user.name?.toLowerCase().includes(query) ||
+      user.email?.toLowerCase().includes(query) ||
+      user.role?.toLowerCase().includes(query)
+    );
+  });
 
   return (
-    <div className="p-8 space-y-6">
-      {/* Toast Notification */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 ${
-            toast.type === "success" ? "bg-green-500" : "bg-red-500"
-          } text-white animate-slide-in`}
-        >
-          {toast.type === "success" && <Check size={20} />}
-          <span>{toast.message}</span>
-          <button onClick={() => setToast(null)} className="ml-2">
-            <X size={18} />
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Users</h1>
+        <div className="flex gap-4 items-center">
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus className="h-5 w-5" />
+            Invite User
           </button>
+          <button
+            onClick={fetchUsers}
+            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Invite User</h2>
+              <button
+                onClick={() => {
+                  setShowInviteModal(false);
+                  setInviteEmail("");
+                  setInviteError(null);
+                  setInviteSuccess(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleInviteUser}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="user@example.com"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={inviteLoading}
+                  />
+                </div>
+              </div>
+
+              {inviteError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {inviteError}
+                </div>
+              )}
+
+              {inviteSuccess && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                  {inviteSuccess}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInviteModal(false);
+                    setInviteEmail("");
+                    setInviteError(null);
+                    setInviteSuccess(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  disabled={inviteLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  disabled={inviteLoading}
+                >
+                  {inviteLoading ? "Sending..." : "Send Invite"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Users & Projects</h1>
-        {/* Only show Add User button if current user is admin */}
-        {isAdmin && (
-          <button
-            onClick={() => setShowInviteModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            Invite User
-          </button>
-        )}
-      </div>
-
       {/* Users Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Users</h2>
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        {usersLoading ? (
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        {loading ? (
           <div className="p-8 text-center text-gray-500">Loading users...</div>
+        ) : error ? (
+          <div className="p-8 text-center">
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={fetchUsers}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Retry
+            </button>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            {searchQuery
+              ? "No users found matching your search"
+              : "No users yet"}
+          </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Name
@@ -184,7 +262,9 @@ export default function Tables() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{user.email || "N/A"}</div>
+                      <div className="text-sm text-gray-900">
+                        {user.email || "N/A"}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -203,7 +283,9 @@ export default function Tables() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
+                      {user.createdAt
+                        ? new Date(user.createdAt).toLocaleDateString()
+                        : "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button className="text-blue-600 hover:text-blue-900 mr-4">
@@ -221,81 +303,10 @@ export default function Tables() {
         )}
       </div>
 
-      {/* Invite User Modal */}
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Invite User</h3>
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleInviteUser} className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-700">Name</label>
-                <input
-                  type="text"
-                  value={inviteForm.name}
-                  onChange={(e) =>
-                    setInviteForm({ ...inviteForm, name: e.target.value })
-                  }
-                  className="mt-1 w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm text-gray-700">Email</label>
-                <input
-                  type="email"
-                  value={inviteForm.email}
-                  onChange={(e) =>
-                    setInviteForm({ ...inviteForm, email: e.target.value })
-                  }
-                  className="mt-1 w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm text-gray-700">Role</label>
-                <select
-                  value={inviteForm.role}
-                  onChange={(e) =>
-                    setInviteForm({ ...inviteForm, role: e.target.value })
-                  }
-                  className="mt-1 w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="consultant">Consultant</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                <strong>Note:</strong> An email will be sent with login credentials to
-                the new user.
-              </div>
-              <div className="flex gap-2 mt-4">
-                <button
-                  type="submit"
-                  disabled={inviteLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {inviteLoading ? "Sending..." : "Send Invitation"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <div className="mt-4 text-sm text-gray-600">
+        Showing {filteredUsers.length} of{" "}
+        {(Array.isArray(users) ? users : []).length} users
+      </div>
     </div>
   );
 }

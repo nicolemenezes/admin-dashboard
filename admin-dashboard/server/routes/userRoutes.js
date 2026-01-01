@@ -1,28 +1,29 @@
 import express from 'express';
-import {
-  getAllUsers,
-  createUser,
-  deleteUser,
-  updateUser,
-  getMyProfile,
-  updateMyProfile,
-  inviteUser,
-} from '../controllers/userController.js';
-import { protect } from '../middleware/authMiddleware.js';
-import { isAdmin } from '../middleware/isAdmin.js';
+import * as userController from '../controllers/userController.js';
+import authMiddleware from '../middleware/authMiddleware.js';
+import isAdmin from '../middleware/isAdmin.js';
 
 const router = express.Router();
 
-router.get('/', getAllUsers);
-router.post('/', createUser);
-router.delete('/:id', deleteUser);
-router.put('/:id', updateUser);
+// Protected routes
+router.use(authMiddleware);
 
-// Profile routes
-router.get('/profile', protect, getMyProfile);
-router.put('/profile', protect, updateMyProfile);
+// Get all users (admin only)
+router.get('/', isAdmin, userController.getAllUsers);
 
-// Admin-only invitation route
-router.post('/invite', protect, isAdmin, inviteUser);
+// Get current user
+router.get('/me', userController.getCurrentUser);
+
+// Invite user endpoint
+router.post('/invite', isAdmin, userController.inviteUser);
+
+// Get user by ID
+router.get('/:id', userController.getUserById);
+
+// Update user
+router.put('/:id', userController.updateUser);
+
+// Delete user (admin only)
+router.delete('/:id', isAdmin, userController.deleteUser);
 
 export default router;

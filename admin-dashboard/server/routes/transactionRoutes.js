@@ -1,28 +1,21 @@
 import express from 'express';
 import {
-  getAllTransactions,
-  getTransactionById,
+  getTransactions,
   createTransaction,
+  getTransaction,
   updateTransaction,
   deleteTransaction,
-  getUserTransactions
 } from '../controllers/transactionController.js';
-import { protect } from '../middleware/authMiddleware.js';
-import { admin } from '../middleware/isAdmin.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(protect);
+router.use(authMiddleware);
 
-// User routes
-router.get('/my-transactions', getUserTransactions);
-
-// Admin routes
-router.get('/', admin, getAllTransactions);
+router.get('/', getTransactions);
 router.post('/', createTransaction);
-router.get('/:id', getTransactionById);
-router.put('/:id', admin, updateTransaction);
-router.delete('/:id', admin, deleteTransaction);
+router.get('/:id', getTransaction);
+router.put('/:id', updateTransaction);
+router.delete('/:id', deleteTransaction);
 
 export default router;

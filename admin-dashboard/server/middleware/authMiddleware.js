@@ -61,3 +61,12 @@ export const optionalAuth = async (req, res, next) => {
   } catch (e) {}
   next();
 };
+
+// ensure the middleware is declared
+const authMiddleware = asyncHandler(async (req, res, next) => {
+  // ...existing auth logic...
+});
+
+// export both named and default
+export { authMiddleware };
+export default authMiddleware;
