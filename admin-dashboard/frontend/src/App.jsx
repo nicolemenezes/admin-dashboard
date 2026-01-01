@@ -1,29 +1,64 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Layout from "./components/Layout";
-import Dashboard from "./pages/Dashboard";
-import Tables from "./pages/Tables";
-import Billing from "./pages/Billing";
-import Profile from "./pages/Profile";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import Dashboard from "./pages/dashboard";
+import Profile from "./pages/Profile";
+import Billing from "./pages/Billing";
+import Tables from "./pages/Tables";
+import ProtectedRoute from "./components/ProtectedRoute";
+import "./App.css";
 
-export default function App() {
+function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-        {/* Auth Routes (No Layout) */}
+        {/* Public routes */}
         <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<Navigate to="/signin" replace />} />
+        <Route path="/signup" element={<SignUp />} />
 
-        {/* Protected Routes (With Layout) */}
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="tables" element={<Tables />} />
-          <Route path="billing" element={<Billing />} />
-          <Route path="profile" element={<Profile />} />
-        </Route>
+        {/* Protected routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing"
+          element={
+            <ProtectedRoute>
+              <Billing />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tables"
+          element={
+            <ProtectedRoute>
+              <Tables />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Default redirect */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        {/* Catch all - redirect to signin */}
+        <Route path="*" element={<Navigate to="/signin" replace />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
+
+export default App;

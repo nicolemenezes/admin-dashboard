@@ -1,27 +1,66 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
-import api from "../lib/api";
+import api from "../lib/axios";
 
 export default function SignIn() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     remember: false,
   });
 
+  // Check if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      console.log('[SignIn] Already logged in, redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
     try {
-      const res = await api.post("/auth/login", {
+      console.log('[SignIn] Submitting login...');
+      const response = await api.post('/api/signin', {
         email: formData.email,
         password: formData.password,
       });
-      console.log("Login success:", res.data);
-      // TODO: store token and redirect
+
+      console.log('[SignIn] Response:', response.data);
+
+      const { token, user } = response.data;
+
+      if (token) {
+        localStorage.setItem('token', token);
+        console.log('[SignIn] ✓ Token saved');
+      }
+
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user));
+        console.log('[SignIn] ✓ User saved:', user);
+      }
+
+      console.log('[SignIn] Redirecting to /dashboard...');
+      navigate('/dashboard', { replace: true });
+
     } catch (error) {
-      console.error("Login failed:", error.response?.data || error.message);
+      console.error('[SignIn] Error:', error);
+      setIsSubmitting(false);
+      
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Invalid credentials";
+      
+      alert(message);
     }
   };
 
@@ -54,11 +93,12 @@ export default function SignIn() {
                 <input
                   type="email"
                   required
+                  disabled={isSubmitting}
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50"
                   placeholder="you@example.com"
                 />
               </div>
@@ -76,17 +116,19 @@ export default function SignIn() {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  disabled={isSubmitting}
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
-                  className="block w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50"
                   placeholder="Enter your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  disabled={isSubmitting}
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -103,6 +145,7 @@ export default function SignIn() {
                 <input
                   type="checkbox"
                   checked={formData.remember}
+                  disabled={isSubmitting}
                   onChange={(e) =>
                     setFormData({ ...formData, remember: e.target.checked })
                   }
@@ -121,25 +164,13 @@ export default function SignIn() {
             {/* Sign In Button */}
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              disabled={isSubmitting}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
             >
-              Sign In
-              <ArrowRight size={18} />
+              {isSubmitting ? "Signing In..." : "Sign In"}
+              {!isSubmitting && <ArrowRight size={18} />}
             </button>
           </form>
-        </div>
-
-        {/* Sign Up Link */}
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
-            Don't have an account?{" "}
-            <Link
-              to="/signup"
-              className="text-blue-600 hover:text-blue-700 font-semibold hover:underline"
-            >
-              Sign up for free
-            </Link>
-          </p>
         </div>
       </div>
     </div>

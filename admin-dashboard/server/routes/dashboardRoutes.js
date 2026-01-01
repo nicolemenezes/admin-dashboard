@@ -3,15 +3,16 @@ console.log('📌 Dashboard routes loaded');
 import express from 'express';
 import {
   getStats,
-  getSummary,
-  calculateStats
+  getRecentActivity
 } from '../controllers/dashboardController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// TEMP: auth removed
+// All dashboard routes require authentication
+router.use(protect);
+
 router.get('/stats', getStats);
-router.get('/summary', getSummary);
-router.get('/calculate-stats', calculateStats);
+router.get('/activity', getRecentActivity);
 
 export default router;

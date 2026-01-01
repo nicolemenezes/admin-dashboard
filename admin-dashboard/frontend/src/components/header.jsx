@@ -1,62 +1,55 @@
 import React, { useState } from "react";
-import { Menu, Bell, Search, ChevronDown } from "lucide-react";
+import { Bell, User } from "lucide-react";
 
-export function Header({ onToggleSidebar }) {
+export function Header({ onToggleSidebar, onLogout }) {
   const [query, setQuery] = useState("");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   return (
-    <header
-      className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-gray-200"
-      role="banner"
-    >
-      <div className="mx-auto flex h-14 items-center gap-3 px-4">
-        <button
-          onClick={() => onToggleSidebar?.()}
-          className="p-2 hover:bg-gray-100 rounded-lg md:hidden"
-          aria-label="Toggle sidebar"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+    <header className="bg-white shadow-sm border-b border-gray-200">
+      <div className="flex items-center justify-between px-6 py-4">
+        {/* Page Title / Breadcrumb */}
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-800">
+            Welcome back! 
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Here's what's happening with your projects today.
+          </p>
+        </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-2 rounded-xl bg-white border border-gray-200 px-3 py-1.5 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/40">
-            <Search className="h-4 w-4 text-gray-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search..."
-              aria-label="Search"
-              className="bg-transparent outline-none text-sm placeholder:text-gray-400 w-64"
-            />
-          </div>
-
-          <button
-            className="relative p-2 hover:bg-gray-100 rounded-lg"
-            aria-label="Notifications"
-          >
-            <Bell className="h-5 w-5 text-gray-600" />
-            <span className="sr-only">1 unread notification</span>
-            <span
-              aria-hidden
-              className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
-            ></span>
-          </button>
-
-          <button
-            className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white shadow-sm px-3 py-1.5 hover:bg-gray-50"
-            aria-label="Account menu"
-          >
-            <div
-              aria-hidden
-              className="h-6 w-6 rounded-full bg-blue-600 text-white grid place-items-center text-[10px] font-semibold"
-            >
-              A
+        {/* Right Section */}
+        <div className="flex items-center gap-4">
+          {/* User Menu */}
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-900">
+                {user.name || "User"}
+              </p>
+              <p className="text-xs text-gray-500">
+                {user.role || "Member"}
+              </p>
             </div>
-            <span className="hidden sm:inline text-sm font-medium">You</span>
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          </button>
+            <div className="relative">
+              <button className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white font-medium hover:shadow-lg transition-shadow">
+                {user.name
+                  ? user.name.charAt(0).toUpperCase()
+                  : <User className="h-5 w-5" />}
+              </button>
+            </div>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="ml-2 px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Logout
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </header>
   );
 }
+
+export default Header;
